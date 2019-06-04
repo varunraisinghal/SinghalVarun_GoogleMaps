@@ -1,4 +1,4 @@
-package com.example.singhalvarun_googlemaps;
+package com.example.myappmaps;
 
 import org.junit.Test;
 
