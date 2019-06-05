@@ -2,12 +2,14 @@ package com.example.myappmaps;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
-import android.os.Build;
+import android.location.LocationManager;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 
+import com.example.myappmaps.R;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -17,8 +19,13 @@ import com.google.android.gms.maps.model.MarkerOptions;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
-    private static final int MY_REQUEST_INT = 177;
     private GoogleMap mMap;
+    private LocationManager locationManager;
+    private boolean isGPSEnabled = false;
+    private boolean isNetworkEnabled = false;
+    private static final int MIN_TIME_BW_UPDATES = 1000*5;
+    private static final float MIN_DISTANCE_CHANGE_FOR_UPDATE = 0.0f ;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,28 +52,78 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mMap = googleMap;
 
         // Add a marker in Sydney and move the camera
-        LatLng SanDiego = new LatLng(32.7157, -117.1611);
-        mMap.addMarker(new MarkerOptions().position(SanDiego).title("Born Here"));
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(SanDiego));
+        LatLng sydney = new LatLng(37.7749, -122.4194);
+        mMap.addMarker(new MarkerOptions().position(sydney).title("Marker in Sydney"));
+        mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
 
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            // TODO: Consider calling
-            if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M){
-                requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION}, MY_REQUEST_INT);
+        setLocationEnabled();
+    }
+    public void getLocation(){
+        try{
+            locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
+            //get GPS status
+            isGPSEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+            if(isGPSEnabled) Log.d("MyMapsApp", "getLocation; GPS is enabled");
+            //TODO get network status (cell tower + wifi) Look for network provider in LocationManager
+            //TODO add code here to update isNetworkEnabled and output Log.d
+            if(!isGPSEnabled && !isNetworkEnabled)
+                Log.d("MyMapsApp", "getLocation: No provider enabled");
+            else{
+                if(isNetworkEnabled){
+                    //TODO add Log.d
+                    locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER,
+                            MIN_TIME_BW_UPDATES,
+                            MIN_DISTANCE_CHANGE_FOR_UPDATE,
+                            locationListenerNetwork);
+                }
+                if(isGPSEnabled){
+                    //TODO add Log.d
+                    locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,
+                            MIN_TIME_BW_UPDATES,
+                            MIN_DISTANCE_CHANGE_FOR_UPDATE,
+                            locationListenerNetwork);
+                }
             }
-            return;
-        }
-        else {
-            mMap.setMyLocationEnabled(true);
+
+        }catch (Exception e){
+            //put log.d
+            e.printStackTrace();
         }
     }
-    public void ChangeView(View view){
-        if(mMap.getMapType() == 1){
-            mMap.setMapType(2);
+    public void setLocationEnabled(){
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+
+            String[] locationPermissions = {Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION};
+
+            ActivityCompat.requestPermissions(this, locationPermissions, 0);
+            return;
+        }
+        mMap.setMyLocationEnabled(true);
+
+    }
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults){
+        if(grantResults.length >0){
+            for(int i:grantResults){
+                if(i != PackageManager.PERMISSION_GRANTED){
+                    Log.d("MyMapsApp","Location permission denied");
+                    break;
+                }
+            }
         }
         else{
-            mMap.setMapType(1);
+            Log.d("MyMapsApp", "Location permission denied");
         }
+        setLocationEnabled();
+    }
+    public void changeView(View view){
 
     }
 }
